@@ -45,15 +45,16 @@ class Gan:
     def _train_batch(self, batch_real_2D, batch_size):  
         batch_real_1D = self.reshape_batch_to_1D(batch_real_2D).to(self.device)
         batch_fake_1D = self.generate_fake_images_as_1D(batch_size) 
-        lossD_real = self.train_discriminator_with_real_images(batch_real_1D)
-        lossD_fake = self.train_discriminator_with_fake_images(batch_fake_1D)
+        lossD_real = self.calculate_discriminator_loss_with_real_images(batch_real_1D)
+        lossD_fake = self.calculate_discriminator_loss_with_fake_images(batch_fake_1D)
         self.update_discriminator_weights(lossD_real, lossD_fake)
         self.update_generator_weights(batch_fake_1D)
         return lossD_real, lossD_fake
 
     def reshape_batch_to_1D(self, batch):
         total_dim_size = batch.shape[1:].numel()
-        return batch.reshape(-1, total_dim_size)
+        assert total_dim_size == self.hyperparams["image_size"]
+        return batch.view(-1, total_dim_size)
 
     def generate_fake_images_as_1D(self, batch_size):
         z_dim = self.generator.z_dim
@@ -70,22 +71,27 @@ class Gan:
 
 
     def update_generator_weights(self, batch_fake_1D):
-        lossG_fake = self.train_discriminator_with_fake_images(batch_fake_1D)
+        lossG_fake = self.calculate_generator_loss(batch_fake_1D)
         self.generator.zero_grad()
         lossG_fake.backward()
         self.generator_optimizer.step()
 
 
-    def train_discriminator_with_real_images(self, real):        
+    def calculate_discriminator_loss_with_real_images(self, real):        
         disc_real = self.discriminator(real).view(-1)
         ### Discriminator Loss: max log(D(real)) + log(1 - D(G(z)))
         return self.criterion(disc_real, torch.ones_like(disc_real))
 
 
-    def train_discriminator_with_fake_images(self, fake):
+    def calculate_discriminator_loss_with_fake_images(self, fake):
         disc_fake = self.discriminator(fake).view(-1)
         ### Discriminator Loss: max log(D(real)) + log(1 - D(G(z)))
         return self.criterion(disc_fake, torch.zeros_like(disc_fake))
+    
+    def calculate_generator_loss(self, fake):
+        disc_fake = self.discriminator(fake).view(-1)
+        ### Discriminator Loss: max log(D(real)) + log(1 - D(G(z)))
+        return self.criterion(disc_fake, torch.ones_like(disc_fake))
     
 
     def _log_batch_count(self, total_epochs, current_epoch, batch_idx, total_batchs, batch_size):
