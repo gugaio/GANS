@@ -7,6 +7,7 @@ import torchvision
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
+from utils.tensor import reshape_batch_to_1D
 from torch.utils.tensorboard import SummaryWriter
 
 
@@ -42,38 +43,14 @@ class Gan:
                     self._log_losses(lossD, lossG)
                     self._write_images_at_tensorboard(real, epoch)
 
-
-    def _log_batch_count(self, total_epochs, current_epoch, batch_idx, total_batchs, batch_size):
-        print(f"Epoch [{current_epoch}/{total_epochs}] Batch {batch_idx}/{total_batchs} Batch Size {batch_size}")
-        
-    def _log_losses(self, lossD, lossG) :
-        print(f"Loss D: {lossD:.4f}, loss G: {lossG:.4f}")
-
     def _train_batch(self, batch_real_2D, batch_size):  
-        batch_real_1D = self.reshape_real_images_as_1D(batch_real_2D) 
+        batch_real_1D = reshape_batch_to_1D(batch_real_2D).to(self.device)
         batch_fake_1D = self.generate_fake_images_as_1D(batch_size) 
         lossD_real = self.train_discriminator_with_real_images(batch_real_1D)
         lossD_fake = self.train_discriminator_with_fake_images(batch_fake_1D)
         self.update_discriminator_weights(lossD_real, lossD_fake)
         self.update_generator_weights(batch_fake_1D)
         return lossD_real, lossD_fake
-    
-    def _write_images_at_tensorboard(self, real, step):
-        with torch.no_grad():
-                fake = self.generator(self.fixed_noise).reshape(-1, 1, 28, 28)
-                data = real.reshape(-1, 1, 28, 28)
-                img_grid_fake = torchvision.utils.make_grid(fake, normalize=True)
-                img_grid_real = torchvision.utils.make_grid(data, normalize=True)
-
-                self.writer_fake.add_image(
-                    "Mnist Fake Images", img_grid_fake, global_step=step
-                )
-                self.writer_real.add_image(
-                    "Mnist Real Images", img_grid_real, global_step=step
-                )
-
-    def reshape_real_images_as_1D(self, batch_real_2D):
-        return self.reshape_2D_to_1D(batch_real_2D).to(self.device)
 
 
     def generate_fake_images_as_1D(self, batch_size):
@@ -97,10 +74,6 @@ class Gan:
         self.generator_optimizer.step()
 
 
-    def reshape_2D_to_1D(self, real):
-        return real.view(-1, 784)
-
-
     def train_discriminator_with_real_images(self, real):        
         disc_real = self.discriminator(real).view(-1)
         ### Discriminator Loss: max log(D(real)) + log(1 - D(G(z)))
@@ -111,3 +84,26 @@ class Gan:
         disc_fake = self.discriminator(fake).view(-1)
         ### Discriminator Loss: max log(D(real)) + log(1 - D(G(z)))
         return self.criterion(disc_fake, torch.zeros_like(disc_fake))
+    
+
+    def _log_batch_count(self, total_epochs, current_epoch, batch_idx, total_batchs, batch_size):
+        print(f"Epoch [{current_epoch}/{total_epochs}] Batch {batch_idx}/{total_batchs} Batch Size {batch_size}")
+        
+
+    def _log_losses(self, lossD, lossG) :
+        print(f"Loss D: {lossD:.4f}, loss G: {lossG:.4f}")
+
+
+    def _write_images_at_tensorboard(self, real, step):
+        with torch.no_grad():
+                fake = self.generator(self.fixed_noise).reshape(-1, 1, 28, 28)
+                data = real.reshape(-1, 1, 28, 28)
+                img_grid_fake = torchvision.utils.make_grid(fake, normalize=True)
+                img_grid_real = torchvision.utils.make_grid(data, normalize=True)
+
+                self.writer_fake.add_image(
+                    "Mnist Fake Images", img_grid_fake, global_step=step
+                )
+                self.writer_real.add_image(
+                    "Mnist Real Images", img_grid_real, global_step=step
+                )
