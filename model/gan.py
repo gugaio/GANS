@@ -7,7 +7,6 @@ import torchvision
 import torchvision.datasets as datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-from utils.tensor import reshape_batch_to_1D
 from torch.utils.tensorboard import SummaryWriter
 
 
