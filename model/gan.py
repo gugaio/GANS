@@ -44,7 +44,7 @@ class Gan:
                     self._write_images_at_tensorboard(real, epoch)
 
     def _train_batch(self, batch_real_2D, batch_size):  
-        batch_real_1D = reshape_batch_to_1D(batch_real_2D).to(self.device)
+        batch_real_1D = self.reshape_batch_to_1D(batch_real_2D).to(self.device)
         batch_fake_1D = self.generate_fake_images_as_1D(batch_size) 
         lossD_real = self.train_discriminator_with_real_images(batch_real_1D)
         lossD_fake = self.train_discriminator_with_fake_images(batch_fake_1D)
@@ -52,6 +52,9 @@ class Gan:
         self.update_generator_weights(batch_fake_1D)
         return lossD_real, lossD_fake
 
+    def reshape_batch_to_1D(self, batch):
+        total_dim_size = batch.shape[1:].numel()
+        return batch.reshape(-1, total_dim_size)
 
     def generate_fake_images_as_1D(self, batch_size):
         z_dim = self.generator.z_dim
