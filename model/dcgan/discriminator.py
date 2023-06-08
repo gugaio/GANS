@@ -14,8 +14,7 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2),
             self._block(features_disc, features_disc*2, 4, 2, 1), # 31x31 -> 16x16
             self._block(features_disc*2, features_disc*4, 4, 2, 1), # 16x16 -> 8x8
-            self._block(features_disc*4, features_disc*8, 4, 2, 1), # 8x8 -> 4x4
-            nn.Conv2d(features_disc*8, out_channels=1, kernel_size=4, stride=2, padding=0), # 1x1x1
+            nn.Conv2d(features_disc*4, out_channels=1, kernel_size=4, stride=2, padding=0), # 1x1x1
             nn.Sigmoid()
         )
 
@@ -31,11 +30,11 @@ class Discriminator(nn.Module):
 ##### TEST #####
 
 def test():
-    batch_size, in_channels, H, W = 8, 1, 64, 64
+    batch_size, in_channels, H, W = 8, 1, 32, 32
     x = torch.randn((batch_size, in_channels, H, W))
     hyperparams = {
-        "image_channels": in_channels,
-        "features_discriminator": 64
+        "channels_image": in_channels,
+        "features_discriminator": 32
     }
     model = Discriminator(hyperparams)
     preds = model(x)

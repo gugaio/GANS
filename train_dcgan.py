@@ -7,8 +7,7 @@ from model.dc_gan import DcGan
 from torch.utils.tensorboard.writer import SummaryWriter
 
 hyperparams = {
-    "image_size": 64,
-    "z_dim": 64,
+    "image_size": 32,
     "learning_rate": 2e-4,
     "num_epochs": 50,
     "batch_size": 32,

@@ -13,7 +13,7 @@ def mnist_loader(batch_size):
 
 def mnist_loader2(batch_size):    
     transform = transforms.Compose([
-        transforms.Resize(64),
+        transforms.Resize(32),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5], std=[0.5]),
     ])
