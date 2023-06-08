@@ -15,7 +15,11 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, x):
+        x = self.reshape_batch_to_1D(x)
         return self.model(x)
+    
+    def reshape_batch_to_1D(self, batch):
+        return batch.view(-1, batch.shape[1:].numel())
     
 ##### TEST #####
 

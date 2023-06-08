@@ -25,6 +25,7 @@ class Discriminator(nn.Module):
         )
     
     def forward(self, x):
+        assert x.shape[1:] == (1, 32, 32), f"Expected (1, 32, 32) but got {x.shape[1:]}"
         return self.model(x)
     
 ##### TEST #####

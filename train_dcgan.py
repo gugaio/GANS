@@ -1,25 +1,25 @@
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from loaders import mnist_loader2
-from model.dc_gan import DcGan
-
-from torch.utils.tensorboard.writer import SummaryWriter
+from model.gan import Gan
+from model.dcgan.discriminator import Discriminator
+from model.dcgan.generator import Generator
+from loaders import mnist_loader
 
 hyperparams = {
-    "image_size": 32,
-    "learning_rate": 2e-4,
-    "num_epochs": 50,
-    "batch_size": 32,
+    "image_width": 32,
+    "image_size": 32 * 32,
     "channels_image": 1,
+    "channels_noise": 100,
     "features_discriminator": 64,
     "features_generator": 64,
-    "channels_noise": 100
+    "learning_rate": 3e-4,
+    "num_epochs": 50,
+    "batch_size": 32
 }
 
 # MNIST dataset
-loader = mnist_loader2(hyperparams["batch_size"])
+loader = mnist_loader(hyperparams["batch_size"], resize=hyperparams["image_width"])
 
 # Gan Model
-gan = DcGan(hyperparams)
+discriminator = Discriminator(hyperparams)
+generator = Generator(hyperparams)
+gan = Gan(discriminator, generator, hyperparams)
 gan.train(loader)

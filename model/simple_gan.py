@@ -1,5 +1,5 @@
-from model.simplegan.discriminator import Discriminator
-from model.simplegan.generator import Generator
+from model.discriminator import Discriminator
+from model.generator import Generator
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -10,22 +10,22 @@ import torchvision.transforms as transforms
 from torch.utils.tensorboard.writer import SummaryWriter
 
 
-class Gan:
+class SimpleGan:
 
 
-    def __init__(self, discriminator, generator, hyperparams):
+    def __init__(self, hyperparams):
         self.hyperparams = hyperparams
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # Discriminator
-        self.discriminator = discriminator.to(self.device)
+        self.discriminator = Discriminator(hyperparams).to(self.device)
         self.discriminator_optimizer = optim.Adam(self.discriminator.parameters(), lr=hyperparams["learning_rate"])
         # Generator
-        self.generator = generator.to(self.device)
+        self.generator = Generator(hyperparams).to(self.device)
         self.generator_optimizer = optim.Adam(self.generator.parameters(), lr=hyperparams["learning_rate"])    
         # Loss function
         self.criterion = nn.BCELoss()
         # Fixed noise for visualization
-        self.fixed_noise = self.generator.sample_noise().to(self.device)
+        self.fixed_noise = torch.randn((hyperparams["batch_size"], hyperparams["z_dim"])).to(self.device) 
         self.writer_fake = SummaryWriter(f"dataset/tensorboard/GAN_MNIST/fake")
         self.writer_real = SummaryWriter(f"dataset/tensorboard/GAN_MNIST/real")
 
@@ -42,18 +42,23 @@ class Gan:
                     self._log_losses(lossD, lossG)
                     self._write_images_at_tensorboard(real, epoch)
 
-    def _train_batch(self, batch_real, batch_size):  
-        batch_real = batch_real.to(self.device)
-        batch_fake = self.generate_fake_images(batch_size) 
-        lossD_real = self.calculate_discriminator_loss_with_real_images(batch_real)
-        lossD_fake = self.calculate_discriminator_loss_with_fake_images(batch_fake)
+    def _train_batch(self, batch_real_2D, batch_size):  
+        batch_real_1D = self.reshape_batch_to_1D(batch_real_2D).to(self.device)
+        batch_fake_1D = self.generate_fake_images_as_1D(batch_size) 
+        lossD_real = self.calculate_discriminator_loss_with_real_images(batch_real_1D)
+        lossD_fake = self.calculate_discriminator_loss_with_fake_images(batch_fake_1D)
         self.update_discriminator_weights(lossD_real, lossD_fake)
-        self.update_generator_weights(batch_fake)
+        self.update_generator_weights(batch_fake_1D)
         return lossD_real, lossD_fake
-    
 
-    def generate_fake_images(self, batch_size):
-        noise = self.generator.sample_noise().to(self.device)
+    def reshape_batch_to_1D(self, batch):
+        total_dim_size = batch.shape[1:].numel()
+        assert total_dim_size == self.hyperparams["image_size"]
+        return batch.view(-1, total_dim_size)
+
+    def generate_fake_images_as_1D(self, batch_size):
+        z_dim = self.generator.z_dim
+        noise = torch.randn(batch_size, z_dim).to(self.device)
         fake = self.generator(noise)
         return fake
 
@@ -99,10 +104,10 @@ class Gan:
 
     def _write_images_at_tensorboard(self, real, step):
         with torch.no_grad():
-                fake = self.generator(self.fixed_noise)
-
-                img_grid_fake = torchvision.utils.make_grid(fake[:32], normalize=True)
-                img_grid_real = torchvision.utils.make_grid(real[:32], normalize=True)
+                fake = self.generator(self.fixed_noise).reshape(-1, 1, 28, 28)
+                data = real.reshape(-1, 1, 28, 28)
+                img_grid_fake = torchvision.utils.make_grid(fake, normalize=True)
+                img_grid_real = torchvision.utils.make_grid(data, normalize=True)
 
                 self.writer_fake.add_image(
                     "Mnist Fake Images", img_grid_fake, global_step=step

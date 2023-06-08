@@ -8,6 +8,7 @@ class Generator(nn.Module):
         self.channels_noise = hyperparams["channels_noise"]
         features_gen = hyperparams["features_generator"]
         channels_image = hyperparams["channels_image"]
+        self.batch_size = hyperparams["batch_size"]
         self.model = nn.Sequential(            
             self._block(in_channels=self.channels_noise, out_channels=features_gen *8, kernel_size=4, stride=1, padding=0), #1x1 -> 4x4
             self._block(in_channels=features_gen *8, out_channels=features_gen *4, kernel_size=4, stride=2, padding=1), #8x8 -> 16x16
@@ -34,6 +35,10 @@ class Generator(nn.Module):
     def forward(self, x):
         return self.model(x)
     
+    def sample_noise(self):
+        H, W = 1, 1
+        return torch.randn((self.batch_size, self.channels_noise, H, W))
+    
 ##### TEST #####
 
 def test():
@@ -42,7 +47,8 @@ def test():
     hyperparams = {
         "channels_noise": channels_noise,
         "features_generator": 32,
-        "channels_image": 1
+        "channels_image": 1,
+        "batch_size": batch_size
     }
     model = Generator(hyperparams)
     preds = model(x)
