@@ -16,7 +16,7 @@ hyperparams = {
 }
 
 # MNIST dataset
-loader = celeba(hyperparams["batch_size"], resize=hyperparams["image_width"])
+loader = celeba(hyperparams["batch_size"])
 
 # Gan Model
 discriminator = Discriminator(hyperparams)
