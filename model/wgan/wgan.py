@@ -2,13 +2,10 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torchvision
-import torchvision.datasets as datasets
-from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
 from torch.utils.tensorboard.writer import SummaryWriter
 
 
-class Gan:
+class WGan:
 
 
     def __init__(self, discriminator, generator, hyperparams):
@@ -16,18 +13,19 @@ class Gan:
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         # Discriminator
         self.discriminator = discriminator.to(self.device)
-        self.discriminator_optimizer = optim.Adam(self.discriminator.parameters(), lr=hyperparams["learning_rate"])
+        self.discriminator_optimizer = optim.RMSprop(self.discriminator.parameters(), lr=hyperparams["learning_rate"])
         # Generator
         self.generator = generator.to(self.device)
-        self.generator_optimizer = optim.Adam(self.generator.parameters(), lr=hyperparams["learning_rate"])    
-        # Loss function
-        self.criterion = nn.BCELoss()
+        self.generator_optimizer = optim.RMSprop(self.generator.parameters(), lr=hyperparams["learning_rate"])    
+
         # Fixed noise for visualization
         self.fixed_noise = self.generator.sample_noise().to(self.device)
         self.writer_fake = SummaryWriter(f"dataset/tensorboard/GAN_MNIST/fake")
         self.writer_real = SummaryWriter(f"dataset/tensorboard/GAN_MNIST/real")
 
     def train(self, train_loader):
+        self.discriminator.train()
+        self.generator.train()
         epochs = self.hyperparams["num_epochs"]
         for epoch in range(epochs):
             for batch_idx, (real, _) in enumerate(train_loader):
@@ -35,57 +33,38 @@ class Gan:
                 print(f"Epoch [{epoch}/{epochs}] Batch {batch_idx}/{len(train_loader)} Batch Size {batch_size}", end='\r')
                 lossD, lossG = self._train_batch(real, batch_size)
 
-                if batch_idx == 0:
+                if batch_idx % 100 == 0 and batch_idx > 0:
                     self._log_batch_count(epochs, epoch, batch_idx, len(train_loader), batch_size)
                     self._log_losses(lossD, lossG)
                     self._write_images_at_tensorboard(real, epoch)
 
-    def _train_batch(self, batch_real, batch_size):  
-        batch_real = batch_real.to(self.device)
+    def _train_batch(self, batch_real, batch_size):
+        loss_disc = None
+        loss_gen = None
+        for n in range(self.hyperparams["n_critic"]):
+            batch_real = batch_real.to(self.device)
+            batch_fake = self.generate_fake_images(batch_size) 
+            disc_real = self.discriminator(batch_real).reshape(-1)
+            disc_fake = self.discriminator(batch_fake).reshape(-1)
+            loss_disc = -(torch.mean(disc_real) - torch.mean(disc_fake))
+            self.discriminator.zero_grad()
+            loss_disc.backward(retain_graph=True)
+            self.discriminator_optimizer.step()
+
+            for p in self.discriminator.parameters():
+                p.data.clamp_(-self.hyperparams["clip_value"], self.hyperparams["clip_value"])
         batch_fake = self.generate_fake_images(batch_size) 
-        lossD_real = self.calculate_discriminator_loss_with_real_images(batch_real)
-        lossD_fake = self.calculate_discriminator_loss_with_fake_images(batch_fake)
-        self.update_discriminator_weights(lossD_real, lossD_fake)
-        self.update_generator_weights(batch_fake)
-        return lossD_real, lossD_fake
-    
+        gen_fake = self.discriminator(batch_fake).reshape(-1)
+        loss_gen = -torch.mean(gen_fake)
+        self.generator.zero_grad()
+        loss_gen.backward()
+        self.generator_optimizer.step()
+        return loss_disc, loss_gen
 
     def generate_fake_images(self, batch_size):
         noise = self.generator.sample_noise().to(self.device)
         fake = self.generator(noise)
         return fake
-
-
-    def update_discriminator_weights(self, lossD_real, lossD_fake):
-        lossD = (lossD_real + lossD_fake) / 2        
-        self.discriminator.zero_grad()
-        lossD.backward(retain_graph=True)
-        self.discriminator_optimizer.step()
-
-
-    def update_generator_weights(self, batch_fake_1D):
-        lossG_fake = self.calculate_generator_loss(batch_fake_1D)
-        self.generator.zero_grad()
-        lossG_fake.backward()
-        self.generator_optimizer.step()
-
-
-    def calculate_discriminator_loss_with_real_images(self, real):        
-        disc_real = self.discriminator(real).view(-1)
-        ### Discriminator Loss: max log(D(real)) + log(1 - D(G(z)))
-        return self.criterion(disc_real, torch.ones_like(disc_real))
-
-
-    def calculate_discriminator_loss_with_fake_images(self, fake):
-        disc_fake = self.discriminator(fake).view(-1)
-        ### Discriminator Loss: max log(D(real)) + log(1 - D(G(z)))
-        return self.criterion(disc_fake, torch.zeros_like(disc_fake))
-    
-    def calculate_generator_loss(self, fake):
-        disc_fake = self.discriminator(fake).view(-1)
-        ### Discriminator Loss: max log(D(real)) + log(1 - D(G(z)))
-        return self.criterion(disc_fake, torch.ones_like(disc_fake))
-    
 
     def _log_batch_count(self, total_epochs, current_epoch, batch_idx, total_batchs, batch_size):
         print(f"Epoch [{current_epoch}/{total_epochs}] Batch {batch_idx}/{total_batchs} Batch Size {batch_size}")

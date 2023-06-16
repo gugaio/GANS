@@ -16,13 +16,12 @@ class Discriminator(nn.Module):
             self._block(features*2, features*4, 4, 2, 1), # 16x16 -> 8x8
             self._block(features*4, features*8, 4, 2, 1), # 16x16 -> 8x8
             nn.Conv2d(features*8, out_channels=1, kernel_size=4, stride=2, padding=0), # 1x1x1
-            nn.Sigmoid()
         )
 
     def _block(self, in_channels, out_channels, kernel_size, stride, padding):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
-            nn.BatchNorm2d(out_channels),
+            nn.InstanceNorm2d(out_channels),
             nn.LeakyReLU(0.2)
         )
     
