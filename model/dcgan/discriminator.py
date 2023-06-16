@@ -25,13 +25,12 @@ class Discriminator(nn.Module):
         )
     
     def forward(self, x):
-        assert x.shape[1:] == (1, 32, 32), f"Expected (1, 32, 32) but got {x.shape[1:]}"
         return self.model(x)
     
 ##### TEST #####
 
 def test():
-    batch_size, in_channels, H, W = 8, 1, 32, 32
+    batch_size, in_channels, H, W = 8, 3, 32, 32
     x = torch.randn((batch_size, in_channels, H, W))
     hyperparams = {
         "channels_image": in_channels,

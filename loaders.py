@@ -12,3 +12,15 @@ def mnist_loader(batch_size, resize=-1):
 
     dataset = datasets.MNIST(root='dataset/', train=True, transform=transform, download=True)
     return DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+def celeba(batch_size, resize=-1):   
+    pipeline = []
+    pipeline.append(transforms.Resize((32,32)))
+    pipeline.append(transforms.ToTensor())
+    pipeline.append(transforms.Normalize(
+        [0.5 for _ in range(3)], [0.5 for _ in range(3)]
+    ))
+    transform = transforms.Compose(pipeline)
+
+    dataset = datasets.ImageFolder(root='celeba/', transform=transform)
+    return DataLoader(dataset, batch_size=batch_size, shuffle=True)
