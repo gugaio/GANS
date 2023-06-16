@@ -10,7 +10,8 @@ class Generator(nn.Module):
         channels_image = hyperparams["channels_image"]
         self.batch_size = hyperparams["batch_size"]
         self.model = nn.Sequential(            
-            self._block(in_channels=self.channels_noise, out_channels=features_gen *8, kernel_size=4, stride=1, padding=0), #1x1 -> 4x4
+            self._block(in_channels=self.channels_noise, out_channels=features_gen *16, kernel_size=4, stride=1, padding=0), #1x1 -> 4x4
+            self._block(in_channels=features_gen *16, out_channels=features_gen *8, kernel_size=4, stride=2, padding=1), #4x4 -> 8x8
             self._block(in_channels=features_gen *8, out_channels=features_gen *4, kernel_size=4, stride=2, padding=1), #8x8 -> 16x16
             self._block(in_channels=features_gen *4, out_channels=features_gen *2, kernel_size=4, stride=2, padding=1), #16x16 -> 32x32
             nn.ConvTranspose2d(features_gen * 2, channels_image, kernel_size=4, stride=2, padding=1),
@@ -28,6 +29,7 @@ class Generator(nn.Module):
                 padding,
                 bias=False,
             ),
+            nn.BatchNorm2d(out_channels),
             nn.ReLU(),
         )
 
@@ -46,7 +48,7 @@ def test():
     x = torch.randn((batch_size, channels_noise, H, W))
     hyperparams = {
         "channels_noise": channels_noise,
-        "features_generator": 32,
+        "features_generator": 64,
         "channels_image": 1,
         "batch_size": batch_size
     }

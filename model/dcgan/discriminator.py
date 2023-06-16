@@ -6,21 +6,22 @@ class Discriminator(nn.Module):
     def __init__(self, hyperparameters) -> None:
         super(Discriminator, self).__init__()
 
-        channels_image = hyperparameters["channels_image"]
-        features_disc = hyperparameters["features_discriminator"]
+        channels = hyperparameters["channels_image"]
+        features = hyperparameters["features_discriminator"]
 
         self.model = nn.Sequential(            
-            nn.Conv2d(in_channels=channels_image, out_channels=features_disc, kernel_size=4, stride=2, padding=1), #64x64 -> 31x31
+            nn.Conv2d(in_channels=channels, out_channels=features, kernel_size=4, stride=2, padding=1), #64x64 -> 31x31
             nn.LeakyReLU(0.2),
-            self._block(features_disc, features_disc*2, 4, 2, 1), # 31x31 -> 16x16
-            self._block(features_disc*2, features_disc*4, 4, 2, 1), # 16x16 -> 8x8
-            nn.Conv2d(features_disc*4, out_channels=1, kernel_size=4, stride=2, padding=0), # 1x1x1
+            self._block(features, features*2, 4, 2, 1), # 31x31 -> 16x16
+            self._block(features*2, features*4, 4, 2, 1), # 16x16 -> 8x8
+            nn.Conv2d(features*4, out_channels=1, kernel_size=4, stride=2, padding=0), # 1x1x1
             nn.Sigmoid()
         )
 
     def _block(self, in_channels, out_channels, kernel_size, stride, padding):
         return nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, bias=False),
+            nn.BatchNorm2d(out_channels),
             nn.LeakyReLU(0.2)
         )
     
