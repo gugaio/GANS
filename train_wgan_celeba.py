@@ -7,7 +7,7 @@ hyperparams = {
     "image_width": 64,
     "image_size": 64 * 64,
     "channels_image": 3,
-    "channels_noise": 100,
+    "z_dim": 100,
     "features_discriminator": 64,
     "features_generator": 64,
     "learning_rate": 3e-4,
