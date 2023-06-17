@@ -29,6 +29,7 @@ class WGan:
         epochs = self.hyperparams["num_epochs"]
         for epoch in range(epochs):
             for batch_idx, (real, labels) in enumerate(train_loader):
+                labels = labels.to(self.device)
                 batch_size = real.shape[0]
                 print(f"Epoch [{epoch}/{epochs}] Batch {batch_idx}/{len(train_loader)} Batch Size {batch_size}", end='\r')
                 lossD, lossG = self._train_batch(real, labels, batch_size)
